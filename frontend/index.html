@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PVN Digital Twin - Quy chế 4281</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="branding">
+      <h1>PVN Digital Twin</h1>
+      <p class="tagline">Quản trị quy trình Quy chế 4281 với Google ADK</p>
+    </div>
+    <div class="connection-block">
+      <label for="backend-url">API server</label>
+      <input id="backend-url" type="url" placeholder="http://localhost:8000" value="http://localhost:8000" autocomplete="off">
+      <button id="connect-btn" type="button">Kiểm tra</button>
+      <span id="connection-status" class="status status-idle">Chưa kết nối</span>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="control-panel" aria-label="Tùy chọn quy trình">
+      <div class="panel-section">
+        <h2>01. Khởi tạo phiên làm việc</h2>
+        <div class="form-row">
+          <label for="app-name">Tên ứng dụng ADK</label>
+          <input id="app-name" type="text" value="pvn_digital_twin" autocomplete="off">
+        </div>
+        <div class="form-grid">
+          <div>
+            <label for="user-id">User ID</label>
+            <input id="user-id" type="text" autocomplete="off">
+          </div>
+          <div>
+            <label for="session-id">Session ID</label>
+            <input id="session-id" type="text" autocomplete="off">
+          </div>
+        </div>
+        <button id="create-session-btn" class="primary" type="button">Tạo/Cập nhật session</button>
+        <p class="hint">Session ADK lưu trạng thái workflow, lịch sử và kết quả xử lý.</p>
+      </div>
+
+      <div class="panel-section">
+        <h2>02. Chọn workflow</h2>
+        <label for="workflow-select">Workflow</label>
+        <select id="workflow-select"></select>
+        <p class="hint">Quy chế 4281 là quy trình mua sắm dịch vụ truyền thông chuẩn hóa của Tập đoàn.</p>
+      </div>
+
+      <div class="panel-section">
+        <h2>03. Nạp văn bản</h2>
+        <div id="dropzone" class="dropzone" role="button" tabindex="0">
+          <p>Kéo & thả văn bản hoặc bấm để tải lên</p>
+          <p class="hint">Hỗ trợ PDF, DOCX, TXT (tối đa 10 MB)</p>
+          <input id="file-input" type="file" accept=".pdf,.doc,.docx,.txt,.rtf" hidden>
+        </div>
+        <div id="file-info" class="file-info" hidden>
+          <div>
+            <strong>Tệp:</strong> <span id="file-name"></span>
+          </div>
+          <div>
+            <strong>Kích thước:</strong> <span id="file-size"></span>
+          </div>
+          <div>
+            <strong>Mã hoá:</strong> <span id="file-encoding"></span>
+          </div>
+        </div>
+        <label for="user-message">Ghi chú cho agent</label>
+        <textarea id="user-message" rows="4" placeholder="Tóm tắt yêu cầu xử lý, ví dụ: \nĐề nghị VP kích hoạt quy trình mua sắm dịch vụ truyền thông cho sự kiện..."></textarea>
+        <button id="run-workflow-btn" class="primary" type="button" disabled>Gửi vào hệ thống</button>
+      </div>
+
+      <div class="panel-section">
+        <h2>Trạng thái phiên</h2>
+        <dl class="session-meta">
+          <div>
+            <dt>Session</dt>
+            <dd id="session-summary">Chưa khởi tạo</dd>
+          </div>
+          <div>
+            <dt>Workflow</dt>
+            <dd id="workflow-summary">Chưa chạy</dd>
+          </div>
+          <div>
+            <dt>Sự kiện gần nhất</dt>
+            <dd id="last-event">—</dd>
+          </div>
+        </dl>
+        <button id="refresh-session-btn" class="ghost" type="button">Làm mới trạng thái</button>
+      </div>
+    </section>
+
+    <section class="visual-panel" aria-label="Đồ họa tác nhân PVN">
+      <div class="graph-card">
+        <div class="card-header">
+          <h2>Bản đồ tác nhân PVN</h2>
+          <div class="legend">
+            <span><span class="legend-dot board"></span>HĐTV</span>
+            <span><span class="legend-dot executive"></span>Ban TGĐ</span>
+            <span><span class="legend-dot division"></span>Ban chuyên môn</span>
+            <span><span class="legend-dot pending"></span>Chưa kích hoạt</span>
+            <span><span class="legend-dot active"></span>Đang xử lý</span>
+            <span><span class="legend-dot completed"></span>Đã hoàn tất</span>
+          </div>
+        </div>
+        <svg id="graph" viewBox="0 0 1200 680" role="img" aria-label="Sơ đồ quan hệ giữa Hội đồng, Ban TGĐ và các Ban chuyên môn"></svg>
+        <div id="actor-detail" class="actor-detail" hidden>
+          <h3 id="actor-name"></h3>
+          <p id="actor-title"></p>
+          <p id="actor-description"></p>
+          <div>
+            <span>Liên quan các bước:</span>
+            <ul id="actor-steps"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-card">
+        <div class="card-header">
+          <h2>Tiến độ workflow</h2>
+        <button id="expand-all-btn" class="ghost" type="button">Mở rộng toàn bộ</button>
+        </div>
+        <div id="timeline"></div>
+      </div>
+    </section>
+  </main>
+
+  <section class="details-panel" aria-label="Chi tiết kết quả">
+    <article class="summary-card">
+      <h2>Tổng kết & KPIs</h2>
+      <div id="summary-content">
+        <p>Chưa có báo cáo tổng kết.</p>
+      </div>
+      <div id="metrics-content" class="metrics"></div>
+    </article>
+
+    <article class="history-card">
+      <h2>Nhật ký tương tác</h2>
+      <div id="event-log"></div>
+    </article>
+  </section>
+
+  <template id="timeline-phase-template">
+    <section class="phase">
+      <header class="phase-header">
+        <button class="collapse-btn" aria-label="Thu gọn"></button>
+        <div>
+          <h3 class="phase-title"></h3>
+          <p class="phase-summary"></p>
+        </div>
+      </header>
+      <ul class="step-list"></ul>
+    </section>
+  </template>
+
+  <template id="timeline-step-template">
+    <li class="step">
+      <div class="step-header">
+        <span class="step-status"></span>
+        <div>
+          <h4 class="step-title"></h4>
+          <p class="step-meta"></p>
+        </div>
+      </div>
+      <div class="step-body"></div>
+    </li>
+  </template>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
